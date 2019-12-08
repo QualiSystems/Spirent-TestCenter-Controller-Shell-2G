@@ -12,10 +12,11 @@ from cloudshell.traffic.tg_helper import (get_reservation_resources, get_address
 from trafficgenerator.tgn_utils import ApiType
 from testcenter.stc_app import init_stc, StcSequencerOperation
 from testcenter.stc_statistics_view import StcStats
-from stcrestclient.resthttp import RestHttpError
 
 
 class StcHandler(object):
+
+    family_name = 'STC Controller Shell 2G'
 
     def initialize(self, context, logger):
 
@@ -23,8 +24,8 @@ class StcHandler(object):
         logging.basicConfig(level=logging.DEBUG)
         logging.getLogger().addHandler(logging.FileHandler(self.logger.handlers[0].baseFilename))
 
-        controller = context.resource.attributes['StcControllerShell2G.Address']
-        port = context.resource.attributes['StcControllerShell2G.Controller TCP Port']
+        controller = context.resource.attributes[self.family_name + '.Address']
+        port = context.resource.attributes[self.family_name + '.Controller TCP Port']
         port = int(port) if port else 8888
         self.stc = init_stc(ApiType.rest, self.logger, rest_server=controller, rest_port=port)
         self.stc.connect()

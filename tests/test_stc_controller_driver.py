@@ -4,24 +4,25 @@ import logging
 import pytest
 
 from cloudshell.traffic.tg_helper import get_reservation_resources, set_family_attribute
-from shellfoundry.releasetools.test_helper import create_session_from_deployment, create_command_context
+from shellfoundry.releasetools.test_helper import create_session_from_deployment, create_command_context_2g
 
 from src.driver import StcControllerShell2GDriver
+from src.stc_handler import StcHandler
 
 controller = 'localhost'
 port = '8888'
 
 
-ports = ['offline-debug-152/Module1/PG1/Port1', 'offline-debug-152/Module1/PG1/Port2']
-attributes = {'StcControllerShell2G.Address': controller,
-              'StcControllerShell2G.Controller TCP Port': port}
+ports = ['offline-debug-STC-494-1/Module1/PG1/Port1', 'offline-debug-STC-494-1/Module1/PG1/Port2']
+attributes = {StcHandler.family_name + '.Address': controller,
+              StcHandler.family_name + '.Controller TCP Port': port}
 
 
 class TestStcControllerDriver(object):
 
     def setup(self):
         self.session = create_session_from_deployment()
-        self.context = create_command_context(self.session, ports, 'TestCenter Controller', attributes)
+        self.context = create_command_context_2g(self.session, ports, StcHandler.family_name, attributes)
         self.driver = StcControllerShell2GDriver()
         self.driver.initialize(self.context)
         print self.driver.logger.handlers[0].baseFilename
@@ -44,7 +45,6 @@ class TestStcControllerDriver(object):
     def test_load_config(self):
         reservation_ports = get_reservation_resources(self.session, self.context.reservation.reservation_id,
                                                       'Generic Traffic Generator Port',
-                                                      'PerfectStorm Chassis Shell 2G.GenericTrafficGeneratorPort',
                                                       'STC Chassis Shell 2G.GenericTrafficGeneratorPort')
         set_family_attribute(self.session, reservation_ports[0], 'Logical Name', 'Port 1')
         set_family_attribute(self.session, reservation_ports[1], 'Logical Name', 'Port 2')
@@ -74,7 +74,6 @@ class TestStcControllerDriver(object):
     def negative_tests(self):
         reservation_ports = get_reservation_resources(self.session, self.context.reservation.reservation_id,
                                                       'Generic Traffic Generator Port',
-                                                      'PerfectStorm Chassis Shell 2G.GenericTrafficGeneratorPort',
                                                       'STC Chassis Shell 2G.GenericTrafficGeneratorPort')
         assert(len(reservation_ports) == 2)
         set_family_attribute(self.session, reservation_ports[0], 'Logical Name', 'Port 1')
@@ -94,7 +93,6 @@ class TestStcControllerDriver(object):
     def test_run_sequencer(self):
         reservation_ports = get_reservation_resources(self.session, self.context.reservation.reservation_id,
                                                       'Generic Traffic Generator Port',
-                                                      'PerfectStorm Chassis Shell 2G.GenericTrafficGeneratorPort',
                                                       'STC Chassis Shell 2G.GenericTrafficGeneratorPort')
         set_family_attribute(self.session, reservation_ports[0], 'Logical Name', 'Port 1')
         set_family_attribute(self.session, reservation_ports[1], 'Logical Name', 'Port 2')

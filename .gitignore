@@ -60,6 +60,6 @@ target/
 cloudshell_config.yml
 
 .idea/
-venv
+venv*
 
 SpirentTestcentercontrollerShell2GDriver.zip
