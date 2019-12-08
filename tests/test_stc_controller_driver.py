@@ -97,5 +97,5 @@ class TestStcControllerDriver(object):
         set_family_attribute(self.session, reservation_ports[0], 'Logical Name', 'Port 1')
         set_family_attribute(self.session, reservation_ports[1], 'Logical Name', 'Port 2')
         self.driver.load_config(self.context, path.join(path.dirname(__file__), 'test_sequencer.tcc'))
-        self.driver.sequencer_command(self.context, 'Start')
-        self.driver.sequencer_command(self.context, 'Wait')
+        self.driver.run_quick_test(self.context, 'Start')
+        self.driver.run_quick_test(self.context, 'Wait')

@@ -121,13 +121,13 @@ class TestStcControllerShell(object):
                                              InputNameValue('output_type', 'JSON')])
         assert(int(json.loads(stats.Output)['Port 1']['TotalFrameCount']) == 4000)
 
-    @pytest.mark.skipif([p for p in ports if 'offline-debug' in p], reason='offline-debug port')
+    # @pytest.mark.skipif([p for p in ports if 'offline-debug' in p], reason='offline-debug port')
     def test_run_sequencer(self):
         self._load_config(path.join(path.dirname(__file__), 'test_sequencer.tcc'))
         self.session.ExecuteCommand(self.context.reservation.reservation_id, StcHandler.family_name, 'Service',
-                                    'sequencer_command', [InputNameValue('command', 'Start')])
+                                    'run_quick_test', [InputNameValue('command', 'Start')])
         self.session.ExecuteCommand(self.context.reservation.reservation_id, StcHandler.family_name, 'Service',
-                                    'sequencer_command', [InputNameValue('command', 'Wait')])
+                                    'run_quick_test', [InputNameValue('command', 'Wait')])
         stats = self.session.ExecuteCommand(self.context.reservation.reservation_id,
                                             StcHandler.family_name, 'Service', 'get_statistics',
                                             [InputNameValue('view_name', 'generatorportresults'),
@@ -135,7 +135,6 @@ class TestStcControllerShell(object):
         assert(int(json.loads(stats.Output)['Port 1']['GeneratorIpv4FrameCount']) == 8000)
 
     def _load_config(self, config):
-        model = self.context.resource.model
         model = 'STC Chassis Shell 2G'
         reservation_ports = get_reservation_resources(self.session, self.context.reservation.reservation_id,
                                                       'Generic Traffic Generator Port',
