@@ -3,67 +3,53 @@ import json
 import csv
 import io
 from collections import OrderedDict
-import logging
 
-from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
-from cloudshell.traffic.tg_helper import (get_reservation_resources, get_address, is_blocking, attach_stats_csv,
-                                          get_family_attribute)
+from cloudshell.traffic.helpers import get_resources_from_reservation, get_location, get_family_attribute
+from cloudshell.traffic.tg import TgControllerHandler, is_blocking, attach_stats_csv
 
-from trafficgenerator.tgn_utils import ApiType
+from trafficgenerator.tgn_utils import ApiType, TgnError
 from testcenter.stc_app import init_stc, StcSequencerOperation
 from testcenter.stc_statistics_view import StcStats
 
+from stc_data_model import STC_Controller_Shell_2G
 
-class StcHandler(object):
 
-    family_name = 'STC Controller Shell 2G'
+class StcHandler(TgControllerHandler):
 
     def initialize(self, context, logger):
 
-        self.logger = logger
-        logging.basicConfig(level=logging.DEBUG)
-        logging.getLogger().addHandler(logging.FileHandler(self.logger.handlers[0].baseFilename))
+        service = STC_Controller_Shell_2G.create_from_context(context)
+        super().initialize(context, logger, service)
 
-        controller = context.resource.attributes[self.family_name + '.Address']
-        port = context.resource.attributes[self.family_name + '.Controller TCP Port']
-        port = int(port) if port else 8888
-        self.stc = init_stc(ApiType.rest, self.logger, rest_server=controller, rest_port=port)
+        controller = self.service.address
+        port = self.service.controller_tcp_port if self.service.controller_tcp_port else '8888'
+        self.stc = init_stc(ApiType.rest, self.logger, rest_server=controller, rest_port=int(port))
         self.stc.connect()
 
-    def tearDown(self):
+    def cleanup(self):
         self.stc.disconnect()
 
     def load_config(self, context, stc_config_file_name):
-        """
-        :param stc_config_file_name: full path to STC configuration file (tcc or xml)
-        """
 
         self.stc.load_config(stc_config_file_name)
         config_ports = self.stc.project.get_ports()
 
-        reservation_id = context.reservation.reservation_id
-        my_api = CloudShellSessionContext(context).get_api()
-
         reservation_ports = {}
-        for port in get_reservation_resources(my_api, reservation_id,
-                                              'STC Chassis Shell 2G.GenericTrafficGeneratorPort'):
-            reservation_ports[get_family_attribute(my_api, port, 'Logical Name').Value.strip()] = port
+        for port in get_resources_from_reservation(context, 'STC Chassis Shell 2G.GenericTrafficGeneratorPort'):
+            reservation_ports[get_family_attribute(context, port.Name, 'Logical Name').strip()] = port
 
         for name, port in config_ports.items():
             if name in reservation_ports:
-                address = get_address(reservation_ports[name])
-                self.logger.debug('Logical Port {} will be reserved on Physical location {}'.format(name, address))
+                address = get_location(reservation_ports[name])
+                self.logger.debug(f'Logical Port {name} will be reserved on Physical location {address}')
                 if 'offline-debug' not in reservation_ports[name].Name:
                     port.reserve(address, force=True, wait_for_up=False)
                 else:
-                    self.logger.debug('Offile debug port {} - no actual reservation'.format(address))
+                    self.logger.debug(f'Offline debug port {address} - no actual reservation')
             else:
-                self.logger.error('Configuration port "{}" not found in reservation ports {}'.
-                                  format(port, reservation_ports.keys()))
-                raise Exception('Configuration port "{}" not found in reservation ports {}'.
-                                format(port, reservation_ports.keys()))
+                raise TgnError(f'Configuration port "{port}" not found in reservation ports {reservation_ports.keys()}')
 
-        self.logger.info("Port Reservation Completed")
+        self.logger.info('Port Reservation Completed')
 
     def send_arp(self):
         self.stc.send_arp_ns()
@@ -94,7 +80,7 @@ class StcHandler(object):
             return json.loads(statistics_str)
         elif output_type.strip().lower() == 'csv':
             captions = statistics[stats_obj.statistics['topLevelName'][0]].keys()
-            output = io.BytesIO()
+            output = io.StringIO()
             w = csv.DictWriter(output, captions)
             w.writeheader()
             for obj_name in statistics:
@@ -102,7 +88,7 @@ class StcHandler(object):
             attach_stats_csv(context, self.logger, view_name, output.getvalue().strip())
             return output.getvalue().strip()
         else:
-            raise Exception('Output type should be CSV/JSON - got "{}"'.format(output_type))
+            raise TgnError(f'Output type should be CSV/JSON - got "{output_type}"')
 
     def sequencer_command(self, command):
         if StcSequencerOperation[command.lower()] == StcSequencerOperation.start:

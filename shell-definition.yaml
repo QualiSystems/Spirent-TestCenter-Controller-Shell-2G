@@ -1,11 +1,11 @@
-description: TOSCA based service shell
+description: TOSCA based STC shell
 imports:
 - cloudshell_standard: cloudshell_traffic_generator_controller_standard_2_0_0.yaml
 metadata:
   template_author: Quali
   template_icon: shell-icon.png
   template_name: Spirent TestCenter Controller Shell 2G
-  template_version: 2.0.1
+  template_version: 3.0.0
 node_types:
   vendor.resource.STC Controller Shell 2G:
     artifacts:
