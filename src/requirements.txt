@@ -1,8 +1,7 @@
 --pre
 
 cloudshell-logging==1.0.3
-cloudshell-orch-core>=3.1.0.0,<3.2.0.0
-cloudshell-automation-api>=9.3,<9.4
+cloudshell-orch-core>=3.3.0.0,<3.4.0.0
 cloudshell-shell-core>=5.0.3,<6.0.0
 cloudshell-traffic>3.2,<=3.3
 

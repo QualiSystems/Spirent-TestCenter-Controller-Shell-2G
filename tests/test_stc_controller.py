@@ -1,12 +1,14 @@
-
+import json
 from pathlib import Path
 
 import pytest
 
-from cloudshell.api.cloudshell_api import AttributeNameValue
-from cloudshell.traffic.helpers import add_resources_to_reservation, get_resources_from_reservation, set_family_attribute, get_reservation_id
+from cloudshell.api.cloudshell_api import AttributeNameValue, InputNameValue
+from cloudshell.traffic.helpers import (add_resources_to_reservation, get_resources_from_reservation,
+                                        set_family_attribute, get_reservation_id)
 from cloudshell.traffic.tg import STC_CONTROLLER_MODEL
-from shellfoundry.releasetools.test_helper import create_session_from_deployment, create_init_command_context, create_service_command_context, end_reservation
+from shellfoundry.releasetools.test_helper import (create_session_from_deployment, create_init_command_context,
+                                                   create_service_command_context, end_reservation)
 
 from trafficgenerator.tgn_utils import TgnError
 from src.stc_driver import StcControllerShell2GDriver
@@ -130,3 +132,114 @@ class TestStcControllerDriver:
         set_family_attribute(context, reservation_ports[0].Name, 'Logical Name', 'Port 1')
         set_family_attribute(context, reservation_ports[1].Name, 'Logical Name', 'Port 2')
         driver.load_config(context, config_file)
+
+
+class TestStcControllerShell:
+
+    def test_session_id(self, session, context, alias):
+        session_id = session.ExecuteCommand(get_reservation_id(context), alias, 'Service', 'get_session_id')
+        print(f'session_id = {session_id.Output}')
+        project = session.ExecuteCommand(get_reservation_id(context), alias,
+                                         'Service', 'get_children',
+                                         [InputNameValue('obj_ref', 'system1'),
+                                          InputNameValue('child_type', 'project')])
+        print(f'project = {project.Output}')
+        project_obj = json.loads(project.Output)[0]
+        project_childs = session.ExecuteCommand(get_reservation_id(context), alias,
+                                                'Service', 'get_children',
+                                                [InputNameValue('obj_ref', project_obj)])
+        print(f'Project-Children = {project_childs.Output}')
+
+        options = session.ExecuteCommand(get_reservation_id(context), alias,
+                                         'Service', 'get_children',
+                                         [InputNameValue('obj_ref', 'system1'),
+                                          InputNameValue('child_type', 'AutomationOptions')])
+        print(f'AutomationOptions = {options.Output}')
+        options_ref = json.loads(options.Output)[0]
+        options_attrs = session.ExecuteCommand(get_reservation_id(context), alias,
+                                               'Service', 'get_attributes',
+                                               [InputNameValue('obj_ref', options_ref)])
+        print(f'AutomationOptions-Attributes = {options_attrs.Output}')
+
+        session.ExecuteCommand(get_reservation_id(context), alias,
+                               'Service', 'set_attribute',
+                               [InputNameValue('obj_ref', options_ref),
+                                InputNameValue('attr_name', 'LogLevel'),
+                                InputNameValue('attr_value', 'INFO')])
+        options_attrs = session.ExecuteCommand(get_reservation_id(context), alias,
+                                               'Service', 'get_attributes',
+                                               [InputNameValue('obj_ref', options_ref)])
+        print(f'AutomationOptions-Attributes = {options_attrs.Output}')
+
+        parameters = {'Parent': project_obj,
+                      'ResultParent': project_obj,
+                      'ConfigType': 'Generator',
+                      'ResultType': 'GeneratorPortResults'}
+        session.ExecuteCommand(get_reservation_id(context), alias,
+                               'Service', 'perform_command',
+                               [InputNameValue('command', 'ResultsSubscribe'),
+                                InputNameValue('parameters_json', json.dumps(parameters))])
+
+    def test_load_config(self, session, context, alias):
+        self._load_config(session, context, alias, Path(__file__).parent.joinpath('test_config.tcc'))
+
+    def test_set_device_params(self, session, context, alias):
+        self._load_config(session, context, alias, Path(__file__).parent.joinpath('test_config.tcc'))
+        project = session.ExecuteCommand(get_reservation_id(context), alias,
+                                         'Service', 'get_children',
+                                         [InputNameValue('obj_ref', 'system1'),
+                                          InputNameValue('child_type', 'project')])
+        project_obj = json.loads(project.Output)[0]
+
+        devices = session.ExecuteCommand(get_reservation_id(context), alias,
+                                         'Service', 'get_children',
+                                         [InputNameValue('obj_ref', project_obj),
+                                          InputNameValue('child_type', 'EmulatedDevice')])
+        devices_obj = json.loads(devices.Output)
+
+        device_obj_1 = devices_obj[0]
+        device_1_attrs = session.ExecuteCommand(get_reservation_id(context), alias,
+                                                'Service', 'get_attributes',
+                                                [InputNameValue('obj_ref', device_obj_1)])
+        device_1_attrs_dict = json.loads(device_1_attrs.Output)
+        print(device_1_attrs_dict)
+        session.ExecuteCommand(get_reservation_id(context), alias,
+                               'Service', 'set_attribute',
+                               [InputNameValue('obj_ref', device_obj_1),
+                                InputNameValue('attr_name', 'RouterID'),
+                                InputNameValue('attr_value', '1.2.3.4')])
+
+    @pytest.mark.usefixtures('skip_if_offline')
+    def test_run_traffic(self, session, context, alias):
+        self._load_config(session, context, alias, Path(__file__).parent.joinpath('test_config.tcc'))
+        session.ExecuteCommand(get_reservation_id(context), alias, 'Service',
+                               'send_arp')
+        session.ExecuteCommand(get_reservation_id(context), alias, 'Service',
+                               'start_devices')
+        session.ExecuteCommand(get_reservation_id(context), alias, 'Service',
+                               'start_traffic', [InputNameValue('blocking', 'True')])
+        stats = session.ExecuteCommand(get_reservation_id(context),
+                                       alias, 'Service', 'get_statistics',
+                                       [InputNameValue('view_name', 'generatorportresults'),
+                                        InputNameValue('output_type', 'JSON')])
+        assert (int(json.loads(stats.Output)['Port 1']['TotalFrameCount']) == 4000)
+
+    @pytest.mark.usefixtures('skip_if_offline')
+    def test_run_sequencer(self, session, context, alias):
+        self._load_config(session, context, alias, Path(__file__).parent.joinpath('test_config.tcc'))
+        session.ExecuteCommand(get_reservation_id(context), alias, 'Service',
+                               'run_quick_test', [InputNameValue('command', 'Start')])
+        session.ExecuteCommand(get_reservation_id(context), alias, 'Service',
+                               'run_quick_test', [InputNameValue('command', 'Wait')])
+        stats = session.ExecuteCommand(get_reservation_id(context),
+                                       alias, 'Service', 'get_statistics',
+                                       [InputNameValue('view_name', 'generatorportresults'),
+                                        InputNameValue('output_type', 'JSON')])
+        assert (int(json.loads(stats.Output)['Port 1']['GeneratorIpv4FrameCount']) == 8000)
+
+    def _load_config(self, session, context, alias, config):
+        reservation_ports = get_resources_from_reservation(context, 'STC Chassis Shell 2G.GenericTrafficGeneratorPort')
+        set_family_attribute(context, reservation_ports[0].Name, 'Logical Name', 'Port 1')
+        set_family_attribute(context, reservation_ports[1].Name, 'Logical Name', 'Port 2')
+        session.ExecuteCommand(get_reservation_id(context), alias, 'Service', 'load_config',
+                               [InputNameValue('config_file_location', config.as_posix())])
