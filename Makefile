@@ -4,7 +4,7 @@ user=pypiadmin
 password=pypiadmin
 
 install:
-	pip install -i http://$(repo):8036 --trusted-host $(repo) -U --pre --use-feature=2020-resolver -r test_requirements.txt
+	pip install -i http://$(repo):8036 --trusted-host $(repo) -U --pre -r test_requirements.txt
 
 .PHONY: build
 build:

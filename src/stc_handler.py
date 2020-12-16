@@ -69,7 +69,7 @@ class StcHandler(TgControllerHandler):
 
     def get_statistics(self, context, view_name, output_type):
 
-        stats_obj = StcStats(self.stc.project, view_name)
+        stats_obj = StcStats(view_name)
         stats_obj.read_stats()
         statistics = OrderedDict()
         for obj_name in stats_obj.statistics['topLevelName']:
