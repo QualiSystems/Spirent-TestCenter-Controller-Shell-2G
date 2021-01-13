@@ -60,7 +60,7 @@ def driver(test_helpers: TestHelpers, server: list) -> StcControllerShell2GDrive
 
 
 @pytest.fixture()
-def context(session: CloudShellAPISession, test_helpers: TestHelpers, server: str) -> ResourceCommandContext:
+def context(session: CloudShellAPISession, test_helpers: TestHelpers, server: list) -> ResourceCommandContext:
     controller_address, controller_port, ports = server
     attributes = [AttributeNameValue(f'{STC_CONTROLLER_MODEL}.Address', controller_address),
                   AttributeNameValue(f'{STC_CONTROLLER_MODEL}.Controller TCP Port', controller_port)]
