@@ -5,7 +5,7 @@ import io
 from collections import OrderedDict
 
 from cloudshell.traffic.helpers import get_resources_from_reservation, get_location, get_family_attribute
-from cloudshell.traffic.tg import TgControllerHandler, is_blocking, attach_stats_csv
+from cloudshell.traffic.tg import TgControllerHandler, is_blocking, attach_stats_csv, STC_CHASSIS_MODEL
 
 from trafficgenerator.tgn_utils import ApiType, TgnError
 from testcenter.stc_app import init_stc, StcSequencerOperation
@@ -15,6 +15,9 @@ from stc_data_model import STC_Controller_Shell_2G
 
 
 class StcHandler(TgControllerHandler):
+
+    def __init__(self):
+        self.stc = None
 
     def initialize(self, context, logger):
 
@@ -35,8 +38,8 @@ class StcHandler(TgControllerHandler):
         config_ports = self.stc.project.get_ports()
 
         reservation_ports = {}
-        for port in get_resources_from_reservation(context, 'STC Chassis Shell 2G.GenericTrafficGeneratorPort'):
-            reservation_ports[get_family_attribute(context, port.Name, 'Logical Name').strip()] = port
+        for port in get_resources_from_reservation(context, f'{STC_CHASSIS_MODEL}.GenericTrafficGeneratorPort'):
+            reservation_ports[get_family_attribute(context, port.Name, 'Logical Name')] = port
 
         for name, port in config_ports.items():
             if name in reservation_ports:
@@ -96,7 +99,7 @@ class StcHandler(TgControllerHandler):
         self.stc.sequencer_command(StcSequencerOperation[command.lower()])
 
     def get_session_id(self):
-        self.logger.info('session_id = {}'.format(self.stc.api.session_id))
+        self.logger.info(f'session_id = {self.stc.api.session_id}')
         return self.stc.api.session_id
 
     def get_children(self, obj_ref, child_type):

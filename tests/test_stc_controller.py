@@ -8,24 +8,24 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from cloudshell.api.cloudshell_api import AttributeNameValue, InputNameValue, CloudShellAPISession
+from cloudshell.shell.core.driver_context import ResourceCommandContext
 from cloudshell.traffic.helpers import get_resources_from_reservation, set_family_attribute, get_reservation_id
 from cloudshell.traffic.tg import STC_CONTROLLER_MODEL, STC_CHASSIS_MODEL
-from cloudshell.shell.core.driver_context import ResourceCommandContext
 from shellfoundry_traffic.test_helpers import create_session_from_config, TestHelpers
 
 from trafficgenerator.tgn_utils import TgnError
 from src.stc_driver import StcControllerShell2GDriver
 
 
-server_505 = '192.168.42.61:8888'
-ports_505 = ['STC-511/Module1/PG1/Port1', 'STC-511/Module1/PG1/Port2']
+server_511 = 'localhost:8888'
+ports_511 = ['STC-511/Module1/PG1/Port1', 'STC-511/Module1/PG1/Port2']
 
-server_properties = {'windows_505': {'server': server_505, 'ports': ports_505}}
+server_properties = {'windows_511': {'server': server_511, 'ports': ports_511}}
 
 ALIAS = 'STC Controller'
 
 
-@pytest.fixture(params=['windows_505'])
+@pytest.fixture(params=['windows_511'])
 def server(request: SubRequest) -> list:
     controller_address = server_properties[request.param]['server'].split(':')[0]
     controller_port = server_properties[request.param]['server'].split(':')[1]
@@ -89,7 +89,7 @@ class TestStcControllerDriver:
         print(f'all children = {driver.get_children(context, "system1")}')
 
     def test_load_config(self, driver: StcControllerShell2GDriver, context: ResourceCommandContext) -> None:
-        self._load_config(driver, context, Path(__file__).parent.joinpath('test_config.tcc'))
+        self._load_config(driver, context, Path(__file__).parent.joinpath('test_config.xml'))
 
     def test_set_device_params(self, driver, context) -> None:
         self._load_config(driver, context, Path(__file__).parent.joinpath('test_config.tcc'))

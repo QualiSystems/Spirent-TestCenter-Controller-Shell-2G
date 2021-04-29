@@ -104,7 +104,7 @@ class StcControllerShell2GDriver(TgControllerDriver):
         self.handler.set_attribute(obj_ref, attr_name, attr_value)
 
     def perform_command(self, context, command, parameters_json):
-        """ Set object attribute.
+        """ Perform STC command.
 
         :param command: valid STC command.
         :param parameters_json: parameters dict {name: value} as serialized json.
