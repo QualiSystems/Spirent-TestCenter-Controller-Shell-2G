@@ -3,17 +3,8 @@ import io
 import json
 from collections import OrderedDict
 
-from cloudshell.traffic.helpers import (
-    get_family_attribute,
-    get_location,
-    get_resources_from_reservation,
-)
-from cloudshell.traffic.tg import (
-    STC_CHASSIS_MODEL,
-    TgControllerHandler,
-    attach_stats_csv,
-    is_blocking,
-)
+from cloudshell.traffic.helpers import get_family_attribute, get_location, get_resources_from_reservation
+from cloudshell.traffic.tg import STC_CHASSIS_MODEL, TgControllerHandler, attach_stats_csv, is_blocking
 from testcenter.stc_app import StcSequencerOperation, init_stc
 from testcenter.stc_statistics_view import StcStats
 from trafficgenerator.tgn_utils import ApiType, TgnError
@@ -31,14 +22,8 @@ class StcHandler(TgControllerHandler):
         super().initialize(context, logger, service)
 
         controller = self.service.address
-        port = (
-            self.service.controller_tcp_port
-            if self.service.controller_tcp_port
-            else "8888"
-        )
-        self.stc = init_stc(
-            ApiType.rest, self.logger, rest_server=controller, rest_port=int(port)
-        )
+        port = self.service.controller_tcp_port if self.service.controller_tcp_port else "8888"
+        self.stc = init_stc(ApiType.rest, self.logger, rest_server=controller, rest_port=int(port))
         self.stc.connect()
 
     def cleanup(self):
@@ -50,29 +35,19 @@ class StcHandler(TgControllerHandler):
         config_ports = self.stc.project.get_ports()
 
         reservation_ports = {}
-        for port in get_resources_from_reservation(
-            context, f"{STC_CHASSIS_MODEL}.GenericTrafficGeneratorPort"
-        ):
-            reservation_ports[
-                get_family_attribute(context, port.Name, "Logical Name")
-            ] = port
+        for port in get_resources_from_reservation(context, f"{STC_CHASSIS_MODEL}.GenericTrafficGeneratorPort"):
+            reservation_ports[get_family_attribute(context, port.Name, "Logical Name")] = port
 
         for name, port in config_ports.items():
             if name in reservation_ports:
                 address = get_location(reservation_ports[name])
-                self.logger.debug(
-                    f"Logical Port {name} will be reserved on Physical location {address}"
-                )
+                self.logger.debug(f"Logical Port {name} will be reserved on Physical location {address}")
                 if "offline-debug" not in reservation_ports[name].Name:
                     port.reserve(address, force=True, wait_for_up=False)
                 else:
-                    self.logger.debug(
-                        f"Offline debug port {address} - no actual reservation"
-                    )
+                    self.logger.debug(f"Offline debug port {address} - no actual reservation")
             else:
-                raise TgnError(
-                    f'Configuration port "{port}" not found in reservation ports {reservation_ports.keys()}'
-                )
+                raise TgnError(f'Configuration port "{port}" not found in reservation ports {reservation_ports.keys()}')
 
         self.logger.info("Port Reservation Completed")
 
@@ -101,9 +76,7 @@ class StcHandler(TgControllerHandler):
             statistics[obj.name] = obj_values
 
         if output_type.strip().lower() == "json":
-            statistics_str = json.dumps(
-                statistics, indent=4, sort_keys=True, ensure_ascii=False
-            )
+            statistics_str = json.dumps(statistics, indent=4, sort_keys=True, ensure_ascii=False)
             return json.loads(statistics_str)
         elif output_type.strip().lower() == "csv":
             captions = list(list(statistics.values())[0].keys())
