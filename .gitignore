@@ -63,3 +63,4 @@ cloudshell_config.yml
 venv*
 
 SpirentTestcentercontrollerShell2GDriver.zip
+.pip-download-cache
