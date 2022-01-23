@@ -18,8 +18,8 @@ from trafficgenerator.tgn_utils import TgnError
 
 from src.stc_driver import StcControllerShell2GDriver
 
-server_511 = "localhost:8888"
-ports_511 = ["STC-511/Module1/PG1/Port1", "STC-511/Module1/PG1/Port2"]
+server_511 = "10.254.30.97:9090"
+ports_511 = ["stc chassis/Module1/PG1/Port1", "stc chassis/Module1/PG4/Port4"]
 
 server_properties = {"windows_511": {"server": server_511, "ports": ports_511}}
 
@@ -78,7 +78,7 @@ def context(session: CloudShellAPISession, test_helpers: TestHelpers, server: li
 
 
 @pytest.fixture
-def skip_if_offline(server):
+def skip_if_offline(server: list) -> None:
     """Skip test on offline ports."""
     if [p for p in server[2] if "offline-debug" in p]:
         pytest.skip("offline-debug port")
