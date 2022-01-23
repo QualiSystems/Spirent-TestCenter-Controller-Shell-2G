@@ -1,4 +1,4 @@
-description: TOSCA based STC shell
+description: TOSCA based STC Controller shell
 imports:
 - cloudshell_standard: cloudshell_traffic_generator_controller_standard_2_0_0.yaml
 metadata:
