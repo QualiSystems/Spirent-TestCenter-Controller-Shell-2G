@@ -15,7 +15,7 @@ from cloudshell.api.cloudshell_api import AttributeNameValue, CloudShellAPISessi
 from cloudshell.shell.core.driver_context import ResourceCommandContext
 from cloudshell.traffic.helpers import get_reservation_id, get_resources_from_reservation, set_family_attribute
 from cloudshell.traffic.tg import STC_CHASSIS_MODEL, STC_CONTROLLER_MODEL
-from shellfoundry_traffic.test_helpers import TestHelpers, create_session_from_config
+from shellfoundry_traffic.test_helpers import TestHelpers, session, skip_if_offline, test_helpers  # noqa: F401
 from trafficgenerator.tgn_utils import TgnError
 
 from src.stc_driver import StcControllerShell2GDriver
@@ -35,21 +35,6 @@ def server(request: SubRequest) -> list:
     controller_address, controller_port = controller.split(":")
     ports = server_properties[request.param]["ports"]
     return [controller_address, controller_port, ports]
-
-
-@pytest.fixture(scope="session")
-def session() -> CloudShellAPISession:
-    """Yield session."""
-    return create_session_from_config()
-
-
-@pytest.fixture()
-def test_helpers(session: CloudShellAPISession) -> Iterable[TestHelpers]:
-    """Yield initialized TestHelpers object."""
-    test_helpers = TestHelpers(session)
-    test_helpers.create_reservation()
-    yield test_helpers
-    test_helpers.end_reservation()
 
 
 @pytest.fixture()
@@ -90,13 +75,6 @@ def context(
     set_family_attribute(context_wo_ports, reservation_ports[0].Name, "Logical Name", "Port 1")
     set_family_attribute(context_wo_ports, reservation_ports[1].Name, "Logical Name", "Port 2")
     return context_wo_ports
-
-
-@pytest.fixture
-def skip_if_offline(server: list) -> None:
-    """Skip test on offline ports."""
-    if [port for port in server[2] if "offline-debug" in port]:
-        pytest.skip("offline-debug port")
 
 
 class TestStcControllerDriver:
