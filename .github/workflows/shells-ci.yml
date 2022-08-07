@@ -17,48 +17,46 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python 3.7
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
       - name: Install dependencies
         run: |
           python -m pip install pip -U
-          pip install tox
+          pip install -r requirements-ci.txt
       - name: Run pre-commit
-        env:
-          TOXENV: pre-commit
-        run: tox
+        run: |
+          export PYTHONPATH=src
+          pre-commit install
+          pre-commit run --files src/*
   pack:
     name: Pack the Shell
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python 3.7
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
       - name: Install dependencies
         run: |
           python -m pip install pip -U
-          pip install tox
+          pip install shellfoundry
       - name: Build
-        env:
-          TOXENV: pack
-        run: tox
+        run: shellfoundry pack
   check-version:
     name: Check version
-    # only for PRs in master
-    if: ${{ github.base_ref == 'master' }}
+    if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python 3.7
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
       - name: Install dependencies
         run: |
           sudo apt-get -y install jq
@@ -69,32 +67,38 @@ jobs:
           cd ${{ github.event.repository.name }}
           git checkout -qf ${{ github.head_ref }}
           echo "Check that shell version increased"
-          current_version=$(git show master:shell-definition.yaml | yq .metadata.template_version)
+          current_version=$(git describe --tags --abbrev=0)
+          echo "Current shell version $current_version"
           new_version=$(yq .metadata.template_version shell-definition.yaml)
+          new_version=${new_version:1:-1}
+          echo "New shell version $new_version"
           if [[ $current_version < $new_version ]]
           then
             exit 0
           fi
-          echo "New shell version must be greater then $current_version"
+          echo "New shell version $new_version must be greater then $current_version"
           exit 1
   create-gh-release:
-    needs: [pre-commit, pack]
+    needs: [pre-commit, pack, check-version]
     if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python 3.7
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
       - name: Install dependencies
         run: |
+          python -m pip install -U pip 
           sudo apt-get -y install jq
-          python -m pip install pip -U
-          pip install tox yq
-      - name: Pack and download dependencies
-        run: tox
+          pip install shellfoundry
+      - name: Pack
+        run: shellfoundry pack
+      - name: Download dependencies
+        run: |
+          shellfoundry dist
       - name: Set envs
         run: |
           version="$(yq -r .metadata.template_version shell-definition.yaml)"
@@ -105,8 +109,7 @@ jobs:
           echo "REPO=$repo" >> $GITHUB_ENV
       - name: Rename dependencies
         run: |
-          mv dist/dependencies-win32.zip dist/cloudshell-$REPO-dependencies-win32-package-$TAG.zip
-          mv dist/dependencies-linux.zip dist/cloudshell-$REPO-dependencies-linux-package-$TAG.zip
+          zip -j dist/cloudshell-$REPO-offline-requirements-package-$TAG.zip dist/offline_requirements/*
       - name: Create GitHub release
         uses: ncipollo/release-action@v1
         with:
