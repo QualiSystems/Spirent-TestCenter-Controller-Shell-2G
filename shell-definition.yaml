@@ -1,11 +1,16 @@
 description: TOSCA based STC Controller shell
+
+tosca_definitions_version: tosca_simple_yaml_1_0
+
 imports:
 - cloudshell_standard: cloudshell_traffic_generator_controller_standard_2_0_0.yaml
+
 metadata:
   template_author: Quali
   template_icon: shell-icon.png
   template_name: Spirent TestCenter Controller Shell 2G
-  template_version: 3.0.2
+  template_version: 3.1.0
+
 node_types:
   vendor.resource.STC Controller Shell 2G:
     artifacts:
@@ -19,4 +24,3 @@ node_types:
       concurrent_execution:
         type: cloudshell.capabilities.SupportConcurrentCommands
     derived_from: cloudshell.nodes.TrafficGeneratorController
-tosca_definitions_version: tosca_simple_yaml_1_0
