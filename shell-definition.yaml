@@ -13,6 +13,7 @@ metadata:
 
 node_types:
   vendor.resource.STC Controller Shell 2G:
+    derived_from: cloudshell.nodes.TrafficGeneratorController
     artifacts:
       driver:
         file: StcControllerShell2GDriver.zip
@@ -23,4 +24,3 @@ node_types:
     capabilities:
       concurrent_execution:
         type: cloudshell.capabilities.SupportConcurrentCommands
-    derived_from: cloudshell.nodes.TrafficGeneratorController
